@@ -1,0 +1,394 @@
+Great! I will help you **set up a complete FastAPI project from zero** with **Laravel-style folder structure**, migrations, models, controllers, services, routes, seeders, and MySQL database.
+
+We will go step-by-step like you are a beginner.
+
+---
+
+# ✅ **PART 1 — Install and Setup FastAPI + Project Folder**
+
+## 📌 Step 1: Create a new project folder
+
+Open terminal / CMD:
+
+```
+mkdir fastapi-laravel-style
+cd fastapi-laravel-style
+```
+
+---
+
+## 📌 Step 2: Create a virtual environment
+
+Windows:
+
+```
+python -m venv venv
+venv\Scripts\activate
+```
+
+Mac/Linux:
+
+```
+python3 -m venv venv
+source venv/bin/activate
+```
+
+---
+
+## 📌 Step 3: Install FastAPI + Uvicorn + SQLAlchemy + Alembic + PyMySQL
+
+```
+pip install fastapi uvicorn sqlalchemy alembic pymysql python-dotenv
+```
+
+---
+
+# ✅ **PART 2 — Create Laravel-like Folder Structure**
+
+Create this folder structure manually or using commands:
+
+```
+mkdir app
+mkdir app/models
+mkdir app/schemas
+mkdir app/services
+mkdir app/controllers
+mkdir app/routes
+mkdir app/database
+```
+
+Also create `main.py`.
+
+Your structure now:
+
+```
+fastapi-laravel-style/
+│── app/
+│   ├── controllers/
+│   ├── database/
+│   ├── models/
+│   ├── routes/
+│   ├── schemas/
+│   ├── services/
+│── main.py
+```
+
+---
+
+# ✅ **PART 3 — Database Connection File (Very Important)**
+
+Create file:
+
+### 📌 `app/database/connection.py`
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+DATABASE_URL = "mysql+pymysql://root:password@localhost:3306/todo_app"
+
+engine = create_engine(DATABASE_URL, echo=True)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+```
+
+👉 **This connects your FastAPI app with MySQL**, same like `config/database.php` in Laravel.
+
+---
+
+# ✅ **PART 4 — Create SQLAlchemy Model (Laravel Model Equivalent)**
+
+Create file:
+
+### 📌 `app/models/user.py`
+
+```python
+from sqlalchemy import Column, Integer, String, Boolean
+from app.database.connection import Base
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True)
+    email = Column(String(120), unique=True)
+    is_active = Column(Boolean, default=True)
+```
+
+✔ Similar to Laravel Model
+✔ Returns ORM object for MySQL
+
+---
+
+# ✅ **PART 5 — Create Pydantic Schema (Laravel FormRequest Equivalent)**
+
+Create file:
+
+### 📌 `app/schemas/user_schema.py`
+
+```python
+from pydantic import BaseModel
+
+class UserBase(BaseModel):
+    username: str
+    email: str
+
+class UserCreate(UserBase):
+    pass
+
+class UserResponse(UserBase):
+    id: int
+    is_active: bool
+
+    class Config:
+        orm_mode = True
+```
+
+✔ Validates request
+✔ Converts ORM → JSON response
+✔ Works like Laravel Resource + Form Request
+
+---
+
+# ✅ **PART 6 — Create Service (Laravel Service Equivalent)**
+
+Create file:
+
+### 📌 `app/services/user_service.py`
+
+```python
+from app.models.user import User
+from app.database.connection import SessionLocal
+
+class UserService:
+
+    def create_user(self, data):
+        db = SessionLocal()
+        new_user = User(**data.dict())
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+
+    def get_users(self):
+        db = SessionLocal()
+        return db.query(User).all()
+```
+
+✔ Logic stays here
+✔ Controller stays clean
+✔ Same as Laravel Services
+
+---
+
+# ✅ **PART 7 — Create Controller (Laravel Controller Equivalent)**
+
+Create file:
+
+### 📌 `app/controllers/user_controller.py`
+
+```python
+from fastapi import APIRouter
+from app.services.user_service import UserService
+from app.schemas.user_schema import UserCreate, UserResponse
+
+router = APIRouter(prefix="/users", tags=["Users"])
+service = UserService()
+
+@router.post("/", response_model=UserResponse)
+def create_user(data: UserCreate):
+    return service.create_user(data)
+
+@router.get("/", response_model=list[UserResponse])
+def get_users():
+    return service.get_users()
+```
+
+✔ Routes connecting to controller
+✔ Controller calling service
+✔ Same as Laravel
+
+---
+
+# ✅ **PART 8 — Route Registration (Laravel routes/api.php)**
+
+Create file:
+
+### 📌 `app/routes/user_route.py`
+
+```python
+from app.controllers.user_controller import router as user_router
+
+def init_routes(app):
+    app.include_router(user_router)
+```
+
+---
+
+# ✅ **PART 9 — Main Application File**
+
+Create file:
+
+### 📌 `main.py`
+
+```python
+from fastapi import FastAPI
+from app.routes.user_route import init_routes
+
+app = FastAPI(title="FastAPI Laravel Style Project")
+
+init_routes(app)
+```
+
+---
+
+# 🚀 RUN THE PROJECT
+
+```
+uvicorn main:app --reload
+```
+
+Open in browser:
+
+👉 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+You will see Swagger UI with routes.
+
+---
+
+# ✅ **PART 10 — Alembic Migration Setup (Same as Laravel Migrations)**
+
+## 📌 Step 1 — Initialize Alembic
+
+```
+alembic init migrations
+```
+
+This creates:
+
+```
+migrations/
+alembic.ini
+```
+
+---
+
+## 📌 Step 2 — Open `alembic.ini` and change database URL
+
+Find:
+
+```
+sqlalchemy.url = sqlite:///./test.db
+```
+
+Change to:
+
+```
+sqlalchemy.url = mysql+pymysql://root:password@localhost:3306/todo_app
+```
+
+---
+
+## 📌 Step 3 — Update migrations/env.py
+
+Find:
+
+```python
+target_metadata = None
+```
+
+Replace with:
+
+```python
+from app.database.connection import Base
+from app.models.user import User
+
+target_metadata = Base.metadata
+```
+
+✔ Now Alembic knows your models
+✔ Same as Laravel reading migrations
+
+---
+
+# 🚀 Create First Migration (same as Laravel: php artisan make:migration)
+
+```
+alembic revision --autogenerate -m "create users table"
+```
+
+---
+
+# 🚀 Apply Migration (same as Laravel: php artisan migrate)
+
+```
+alembic upgrade head
+```
+
+---
+
+# 🚀 Update Migration (same as Laravel: modify table)
+
+Example: You add a column in `User` model
+Run again:
+
+```
+alembic revision --autogenerate -m "add new column"
+alembic upgrade head
+```
+
+---
+
+# ⚡ BONUS — Database Seeder (Laravel Seeder Equivalent)
+
+Create file:
+
+### 📌 `app/database/seeder.py`
+
+```python
+from app.models.user import User
+from app.database.connection import SessionLocal
+
+def seed():
+    db = SessionLocal()
+    user = User(username="admin", email="admin@example.com")
+    db.add(user)
+    db.commit()
+```
+
+Run seeder:
+
+```
+python -c "from app.database.seeder import seed; seed()"
+```
+
+---
+
+# 🎉 Your Full Laravel-Style FastAPI System Is Ready!
+
+You now have:
+
+✔ Model
+✔ Schema
+✔ Controller
+✔ Service
+✔ Route
+✔ Migration
+✔ Seeder
+✔ MySQL connection
+✔ /docs API UI
+
+---
+
+# ✅ **If you want next step:**
+
+I can now help you create:
+
+👉 Auth system (login, register, JWT like Laravel Sanctum)
+👉 Todo CRUD API
+👉 Roles & permissions
+👉 Artisan-like CLI command
+👉 Frontend React integration
+
+Just tell me **“Continue Level 2”** when you're ready.
