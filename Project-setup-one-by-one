@@ -43,6 +43,12 @@ pip install fastapi uvicorn sqlalchemy alembic pymysql python-dotenv
 
 ---
 
+# write txt file lib imported :
+
+pip freeze > requirements.txt
+
+---
+
 # ✅ **PART 2 — Create Laravel-like Folder Structure**
 
 Create this folder structure manually or using commands:
